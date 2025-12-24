@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
 
@@ -34,10 +35,19 @@ class NewsClassifier:
             self.load_model()
 
     def preprocess_text(self, text: str) -> str:
-        normalized = text.lower()
-        normalized = re.sub(r"[^a-zA-Zа-яё\s]", " ", normalized)
-        normalized = re.sub(r"\s+", " ", normalized)
-        return normalized.strip()
+        if not text:
+            return ""
+        normalized = unicodedata.normalize("NFKC", text)
+        cleaned_chars: List[str] = []
+        for char in normalized:
+            category = unicodedata.category(char)
+            if category.startswith("L") or category.startswith("N"):
+                cleaned_chars.append(char.lower())
+            elif char.isspace():
+                cleaned_chars.append(" ")
+        cleaned = "".join(cleaned_chars)
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        return cleaned.strip()
 
     def train_model(self, dataset_path: DatasetPath = DEFAULT_DATASET_PATH) -> Pipeline:
         dataset_path = Path(dataset_path)

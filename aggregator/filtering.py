@@ -6,6 +6,8 @@ from typing import Iterable, List, Sequence
 from better_profanity import profanity
 
 from .config import AggregatorConfig
+from .features import FeatureEngineer
+from .language import LanguageDetector
 from .types import Post
 
 LOGGER = logging.getLogger(__name__)
@@ -19,6 +21,13 @@ class PostFilter:
         self._high_value_keywords = tuple(
             keyword.lower() for keyword in config.high_value_keywords
         )
+        self._stop_words = tuple(word.lower() for word in config.stop_words)
+        self._stop_topics = tuple(topic.lower() for topic in config.stop_topics)
+        self._language_detector = LanguageDetector(
+            allowed_languages=config.allowed_languages,
+            enabled=config.enable_language_filter,
+        )
+        self._feature_engineer = FeatureEngineer(config)
 
     @staticmethod
     def _combine_text(post: Post) -> str:
@@ -35,11 +44,23 @@ class PostFilter:
     def _is_profane(self, text: str) -> bool:
         return profanity.contains_profanity(text)
 
+    def _contains_stop_word(self, text: str) -> bool:
+        return any(stop_word in text for stop_word in self._stop_words)
+
+    def _contains_stop_topic(self, text: str) -> bool:
+        return any(topic in text for topic in self._stop_topics)
+
     def basic_filter(self, posts: Sequence[Post]) -> List[Post]:
         filtered: List[Post] = []
         for post in posts:
             text = self._combine_text(post)
+            if not self._language_detector.is_allowed(text):
+                continue
             if self._is_excluded(text):
+                continue
+            if self._contains_stop_word(text):
+                continue
+            if self._contains_stop_topic(text):
                 continue
             if self._is_profane(text):
                 continue
@@ -59,6 +80,12 @@ class PostFilter:
         candidates: List[Post] = []
         for post in ml_filtered:
             text = self._combine_text(post)
+            if not self._language_detector.is_allowed(text):
+                continue
+            if self._contains_stop_word(text):
+                continue
+            if self._contains_stop_topic(text):
+                continue
             if not self._is_profane(text):
                 candidates.append(post)
         LOGGER.info("Profanity filter reduced ML output to %d posts.", len(candidates))
@@ -92,11 +119,18 @@ class PostFilter:
             post_copy = post.copy()
             base_score = self.calculate_base_score(post_copy)
             ml_score = post_copy.get("ml_score")
-            if ml_score is None:
-                post_copy["combined_score"] = base_score / 10.0
-            else:
-                post_copy["combined_score"] = 0.7 * float(ml_score) + 0.3 * (
-                    base_score / 10.0
-                )
+            features = self._feature_engineer.compute(post_copy)
+            post_copy["features"] = features
+            quality_score = (
+                base_score / 10.0
+                if ml_score is None
+                else 0.7 * float(ml_score) + 0.3 * (base_score / 10.0)
+            )
+            combined = (
+                0.6 * quality_score
+                + 0.2 * features["recency_score"]
+                + 0.2 * features["engagement_norm"]
+            ) * features["source_weight"]
+            post_copy["combined_score"] = combined
             scored_posts.append(post_copy)
         return scored_posts

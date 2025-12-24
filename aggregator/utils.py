@@ -6,6 +6,8 @@ import re
 from datetime import datetime
 from typing import Any, Callable, Optional, Sequence, Tuple
 
+import bleach
+
 from .types import Post
 
 LOGGER = logging.getLogger(__name__)
@@ -40,6 +42,15 @@ def ml_badge(score: Optional[float]) -> str:
     if score is None:
         return ""
     return f"<span class='ml-score-badge'>{float(score):.3f}</span>"
+
+
+def sentiment_badge(score: Optional[float], label: Optional[str]) -> str:
+    if score is None or label is None:
+        return ""
+    color = "#10b981" if score > 0 else "#ef4444" if score < 0 else "#94a3b8"
+    return (
+        f"<span style='color:{color}; font-weight:600;'>{label} ({score:+.2f})</span>"
+    )
 
 
 def make_link_cell(post: Post) -> str:
@@ -82,3 +93,7 @@ def log_post_summary(prefix: str, posts: Sequence[Post]) -> None:
             float(post.get("combined_score", 0.0)),
             (post.get("title") or "")[:80],
         )
+
+
+def sanitize_text(text: str) -> str:
+    return bleach.clean(text or "", tags=[], strip=True)

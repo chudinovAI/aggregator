@@ -1,17 +1,15 @@
-import os
-from typing import Any
+import asyncpraw
 
-import praw
-from googleapiclient.discovery import build
+from .config import AggregatorConfig
 
 
-def build_reddit_client() -> praw.Reddit:
-    return praw.Reddit(
-        client_id=os.getenv("REDDIT_CLIENT_ID"),
-        client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+def build_reddit_client(config: AggregatorConfig) -> asyncpraw.Reddit:
+    return asyncpraw.Reddit(
+        client_id=config.reddit_client_id,
+        client_secret=config.reddit_client_secret,
         user_agent="AdvancedNewsAggregator/2.0",
     )
 
 
-def build_youtube_client() -> Any:
-    return build("youtube", "v3", developerKey=os.getenv("YOUTUBE_API_KEY"))
+def build_youtube_client(config: AggregatorConfig) -> str:
+    return config.youtube_api_key
