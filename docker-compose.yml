@@ -1,0 +1,157 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: news_aggregator_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-news_aggregator}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-news_aggregator}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - news_aggregator_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: news_aggregator_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - news_aggregator_network
+
+  # Backend API (uses Granian for ~3x performance vs Uvicorn)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: news_aggregator_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Application
+      APP__NAME: ${APP__NAME:-news-aggregator}
+      APP__VERSION: ${APP__VERSION:-1.0.0}
+      APP__ENVIRONMENT: ${APP__ENVIRONMENT:-development}
+      APP__DEBUG: ${APP__DEBUG:-false}
+      # Server (Granian)
+      SERVER__HOST: "0.0.0.0"
+      SERVER__PORT: "8000"
+      SERVER__WORKERS: ${SERVER__WORKERS:-4}
+      SERVER__BACKLOG: ${SERVER__BACKLOG:-2048}
+      # Database - use container hostname
+      DATABASE__URL: postgresql+psycopg://postgres:postgres@postgres:5432/news_aggregator
+      DATABASE__POOL_SIZE: ${DATABASE__POOL_SIZE:-10}
+      DATABASE__ECHO: ${DATABASE__ECHO:-false}
+      # Redis - use container hostname
+      REDIS__URL: redis://redis:6379/0
+      REDIS__MAX_CONNECTIONS: ${REDIS__MAX_CONNECTIONS:-20}
+      REDIS__CACHE_TTL_SECONDS: ${REDIS__CACHE_TTL_SECONDS:-900}
+      REDIS__LOCK_TTL_SECONDS: ${REDIS__LOCK_TTL_SECONDS:-60}
+      # Telegram
+      TELEGRAM__TOKEN: ${TELEGRAM__TOKEN:-}
+      TELEGRAM__ADMIN_ID: ${TELEGRAM__ADMIN_ID:-}
+      # Logging
+      LOGGING__LEVEL: ${LOGGING__LEVEL:-INFO}
+      # ML
+      ML__MODEL_PATH: ${ML__MODEL_PATH:-models/news_classifier.pkl}
+      ML__THRESHOLD: ${ML__THRESHOLD:-0.65}
+      # Migrations
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - news_aggregator_network
+
+  # Telegram Worker (optional - uncomment when ready)
+  # telegram_worker:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/Dockerfile.backend
+  #   container_name: news_aggregator_telegram
+  #   restart: unless-stopped
+  #   command: ["python", "main.py", "bot"]
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     DATABASE__URL: postgresql+psycopg://postgres:postgres@postgres:5432/news_aggregator
+  #     REDIS__URL: redis://redis:6379/0
+  #     TELEGRAM__TOKEN: ${TELEGRAM__TOKEN}
+  #     TELEGRAM__ADMIN_ID: ${TELEGRAM__ADMIN_ID}
+  #     LOGGING__LEVEL: ${LOGGING__LEVEL:-INFO}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - news_aggregator_network
+
+  # Background Scheduler (optional - uncomment when ready)
+  # scheduler:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/Dockerfile.backend
+  #   container_name: news_aggregator_scheduler
+  #   restart: unless-stopped
+  #   command: ["python", "main.py", "scheduler"]
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     DATABASE__URL: postgresql+psycopg://postgres:postgres@postgres:5432/news_aggregator
+  #     REDIS__URL: redis://redis:6379/0
+  #     LOGGING__LEVEL: ${LOGGING__LEVEL:-INFO}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - news_aggregator_network
+
+networks:
+  news_aggregator_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

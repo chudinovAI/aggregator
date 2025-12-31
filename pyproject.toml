@@ -1,32 +1,138 @@
 [project]
-name = "aggregator"
+name = "news-aggregator"
 version = "1.0.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Personalized news aggregation service with ML classification"
 requires-python = ">=3.11"
+
+# Core dependencies required for all environments
 dependencies = [
-    "better-profanity==0.7.0",
-    "aiohttp==3.9.1",
-    "asyncpraw==7.7.1",
-    "bleach==6.1.0",
-    "langdetect==1.0.9",
-    "joblib==1.3.2",
-    "numpy==1.24.3",
-    "pandas==2.1.0",
-    "praw==7.7.1",
-    "psycopg[binary]==3.1.12",
-    "python-dotenv==1.0.0",
-    "pydantic>=2.4.0",
-    "pydantic-settings>=2.0.3",
-    "requests==2.31.0",
-    "scikit-learn==1.3.0",
-    "spacy==3.7.2",
-    "transformers>=4.36.0",
-    "torch>=2.1.0",
-    "redis==5.0.1",
+    # Configuration & validation
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    # HTTP client
+    "httpx>=0.25",
 ]
 
-[dependency-groups]
-dev = [
-    "ruff>=0.14.10",
+[project.optional-dependencies]
+# Database dependencies
+db = [
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.12",
+    "redis>=5.0",
 ]
+
+# API server dependencies (production uses granian for 3x performance)
+api = [
+    "fastapi>=0.104",
+    "granian>=1.0",
+    "python-multipart>=0.0.6",
+]
+
+# Development server (uvicorn for hot-reload)
+api-dev = [
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.24",
+    "python-multipart>=0.0.6",
+]
+
+# Telegram bot dependencies
+bot = [
+    "aiogram>=3.3",
+]
+
+# Background scheduler
+scheduler = [
+    "apscheduler>=3.10",
+]
+
+# Machine learning (lightweight - no deep learning)
+ml = [
+    "scikit-learn>=1.3",
+    "numpy>=1.24",
+    "joblib>=1.3",
+]
+
+# Semantic scoring with transformers (optional, heavier)
+ml-transformers = [
+    "sentence-transformers>=2.2",
+    "torch>=2.0",
+]
+
+# Development tools
+dev = [
+    "ruff>=0.1",
+    "mypy>=1.5",
+    "types-redis>=4.6",
+]
+
+# Testing dependencies
+test = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.12",
+    "factory-boy>=3.3",
+    "faker>=20.0",
+    "respx>=0.20",
+    "aiosqlite>=0.19",
+]
+
+# All production dependencies (convenience group)
+prod = [
+    "news-aggregator[db,api,bot,scheduler,ml,ml-transformers]",
+]
+
+# All development dependencies (convenience group)
+all = [
+    "news-aggregator[prod,api-dev,dev,test]",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=src --cov-report=html"
+
+[tool.mypy]
+python_version = "3.11"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+mypy_path = "."
+namespace_packages = true
+explicit_package_bases = true
+exclude = ["alembic/", "tests/", "src/web/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "sqlalchemy.*",
+    "alembic.*",
+    "apscheduler.*",
+    "aiogram.*",
+    "sklearn.*",
+    "joblib.*",
+    "granian.*",
+    "pydantic.*",
+    "pydantic_settings.*",
+    "redis.*",
+    "fastapi.*",
+    "starlette.*",
+    "httpx.*",
+    "numpy.*",
+    "sentence_transformers.*",
+    "aiohttp.*",
+    "uvicorn.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["bin.*", "main"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]

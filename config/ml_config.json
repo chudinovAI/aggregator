@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ml_config.json",
+  "description": "Machine learning classifier configuration",
+  
+  "classifier": {
+    "model_type": "tfidf",
+    "description": "Options: 'tfidf' (CPU-friendly), 'transformer' (requires GPU)",
+    
+    "language": "en",
+    "supported_languages": ["en", "ru", "multilingual"],
+    
+    "use_gpu": false,
+    "gpu_notes": "Set to true only if CUDA is available. Falls back to CPU if unavailable.",
+    
+    "confidence_threshold": 0.65,
+    "description_threshold": "Posts below this score are marked as 'boring'",
+    
+    "batch_size": 32,
+    "batch_size_notes": "Increase to 256 for GPU, keep at 32 for CPU",
+    
+    "cache_predictions": true,
+    "cache_ttl_seconds": 3600,
+    
+    "retrain_interval_seconds": 86400,
+    "retrain_notes": "Retrain classifier every 24 hours with new feedback"
+  },
+  
+  "vectorizer": {
+    "type": "tfidf",
+    "max_features": 5000,
+    "ngram_range": [1, 2],
+    "min_df": 2,
+    "max_df": 0.95,
+    "sublinear_tf": true
+  },
+  
+  "model_paths": {
+    "en": {
+      "vectorizer": "models/en/vectorizer.pkl",
+      "classifier": "models/en/classifier.pkl"
+    },
+    "ru": {
+      "vectorizer": "models/ru/vectorizer.pkl",
+      "classifier": "models/ru/classifier.pkl"
+    }
+  },
+  
+  "fallback": {
+    "default_score": 0.5,
+    "description": "Score to assign when classifier is unavailable"
+  }
+}

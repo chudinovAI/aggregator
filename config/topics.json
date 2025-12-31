@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "topics.json",
+  "description": "Topic configuration for filtering and personalization",
+  
+  "topics": {
+    "python": {
+      "enabled": true,
+      "display_name": "Python",
+      "keywords": ["python", "django", "flask", "fastapi", "asyncio", "pandas", "numpy", "pydantic", "sqlalchemy", "pytest", "uv", "ruff"],
+      "languages": ["en", "ru"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 1
+    },
+    
+    "machine_learning": {
+      "enabled": true,
+      "display_name": "Machine Learning & AI",
+      "keywords": ["machine learning", "deep learning", "neural network", "nlp", "gpt", "llm", "tensorflow", "pytorch", "transformers", "openai", "anthropic", "claude", "chatgpt", "langchain", "rag", "fine-tuning", "embeddings"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 1
+    },
+    
+    "web_development": {
+      "enabled": true,
+      "display_name": "Web Development",
+      "keywords": ["javascript", "typescript", "react", "vue", "angular", "svelte", "nodejs", "nextjs", "nuxt", "frontend", "backend", "api", "graphql", "rest", "htmx", "tailwind", "css"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 2
+    },
+    
+    "devops": {
+      "enabled": true,
+      "display_name": "DevOps & Cloud",
+      "keywords": ["docker", "kubernetes", "k8s", "aws", "azure", "gcp", "terraform", "ansible", "ci/cd", "github actions", "gitlab", "jenkins", "devops", "cloud", "infrastructure"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 2
+    },
+    
+    "rust": {
+      "enabled": true,
+      "display_name": "Rust",
+      "keywords": ["rust", "cargo", "tokio", "wasm", "webassembly", "rustc", "actix", "axum"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 3
+    },
+    
+    "golang": {
+      "enabled": true,
+      "display_name": "Go",
+      "keywords": ["golang", "go lang", "goroutine", "gin", "fiber", "echo"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 3
+    },
+    
+    "security": {
+      "enabled": true,
+      "display_name": "Security & Privacy",
+      "keywords": ["security", "cybersecurity", "hacking", "vulnerability", "exploit", "malware", "ransomware", "privacy", "encryption", "zero-day", "cve", "pentest"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 2
+    },
+    
+    "databases": {
+      "enabled": true,
+      "display_name": "Databases",
+      "keywords": ["postgresql", "postgres", "mysql", "mongodb", "redis", "elasticsearch", "sqlite", "database", "sql", "nosql", "timescaledb", "clickhouse"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 3
+    },
+    
+    "linux": {
+      "enabled": true,
+      "display_name": "Linux & System Admin",
+      "keywords": ["linux", "ubuntu", "debian", "arch", "fedora", "systemd", "bash", "shell", "terminal", "cli", "sysadmin"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 3
+    },
+    
+    "startups": {
+      "enabled": true,
+      "display_name": "Startups & Business",
+      "keywords": ["startup", "entrepreneur", "vc", "funding", "yc", "product", "saas", "b2b", "founder", "bootstrapped"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 4
+    },
+    
+    "career": {
+      "enabled": true,
+      "display_name": "Career & Jobs",
+      "keywords": ["career", "interview", "hiring", "job", "salary", "remote work", "resume", "leetcode", "faang"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 4
+    },
+    
+    "open_source": {
+      "enabled": true,
+      "display_name": "Open Source",
+      "keywords": ["open source", "oss", "github", "gitlab", "maintainer", "contributor", "license", "foss"],
+      "languages": ["en"],
+      "sources": ["hackernews", "reddit"],
+      "priority": 3
+    }
+  },
+  
+  "defaults": {
+    "min_keyword_match": 1,
+    "case_sensitive": false,
+    "match_in_title_only": false
+  },
+  
+  "suggested_topics": [
+    "python",
+    "machine_learning",
+    "web_development",
+    "devops",
+    "rust",
+    "golang",
+    "security",
+    "databases",
+    "linux",
+    "startups",
+    "career",
+    "open_source"
+  ]
+}

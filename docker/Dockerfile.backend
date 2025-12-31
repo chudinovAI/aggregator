@@ -1,0 +1,87 @@
+# =============================================================================
+# NEWS AGGREGATOR - Production Dockerfile
+# =============================================================================
+# Uses Granian (Rust-based ASGI server) for 3x performance improvement
+# over Uvicorn. Multi-stage build for minimal image size.
+# =============================================================================
+
+# Stage 1: Builder
+FROM python:3.11-slim as builder
+
+# Set environment variables for build
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency files
+COPY pyproject.toml .
+
+# Install production dependencies with Granian
+# Note: granian is a Rust-based ASGI server, ~3x faster than uvicorn
+RUN pip install --user --no-cache-dir ".[prod]"
+
+# Stage 2: Runtime
+FROM python:3.11-slim as runtime
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/home/appuser/.local/bin:$PATH" \
+    PYTHONPATH="/app:$PYTHONPATH" \
+    # Granian server config (can be overridden)
+    SERVER__HOST=0.0.0.0 \
+    SERVER__PORT=8000 \
+    SERVER__WORKERS=4 \
+    SERVER__BACKLOG=2048
+
+# Install runtime system dependencies (minimal)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /home/appuser/.local
+
+WORKDIR /app
+
+# Copy application code (excluding .env, secrets)
+COPY src/ ./src/
+COPY config/ ./config/
+COPY alembic/ ./alembic/
+COPY main.py alembic.ini pyproject.toml ./
+
+# Copy static files if they exist
+COPY --chown=appuser:appuser static/ ./static/ 2>/dev/null || true
+
+# Create directories for models and logs
+RUN mkdir -p /app/models /app/logs && \
+    chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Entry point for migrations and setup
+COPY --chown=appuser:appuser docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Default command: Run FastAPI with Granian (production server)
+# Granian is ~3x faster than Uvicorn with lower CPU usage
+CMD ["python", "main.py", "api"]

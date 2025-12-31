@@ -19,6 +19,27 @@ pip install -e .
    ```
    Keys found in the environment always override the file.
 
+## Configuration
+
+- Runtime settings live in `src/config.py` and rely on `pydantic-settings`.
+- Environment variables follow the `SECTION__FIELD` convention (e.g., `DATABASE__URL`), matching the keys shown in `.env.example`.
+- Load settings anywhere with:
+  ```python
+  from src.config import get_settings
+
+  settings = get_settings()
+  db_url = settings.database.url
+  ```
+- Configure logging once per process with:
+  ```python
+  from src.logger import setup_logging
+
+  logger = setup_logging()
+  logger.info("Aggregating sources…")
+  ```
+- Logs are written to `logs/app.log` with rotation; override location or levels through the `LOGGING__*` variables.
+- Commit your own `.env` only for local development—production deployments should inject secrets via your orchestrator or secret manager.
+
 ## Train classifiers
 
 Classic TF-IDF + logistic regression:
@@ -81,8 +102,8 @@ Reports go to `docs/` by default; logs are JSON-formatted.***
 
 ### Secrets management
 
-- `.env` files inside the repo are no longer used. Provide credentials via OS
-  environment or a secrets file referenced by `AGG_SECRETS_PATH`.
+- `.env` files are supported for local development (see `.env.example`), but production deployments
+  should continue to source credentials from the OS environment or a secrets file referenced by `AGG_SECRETS_PATH`.
 - Secrets file format is plain JSON (`{"KEY": "value"}`) stored outside the repo,
   ideally in an encrypted volume or secret manager mount.
 - `load_runtime_secrets()` leaves pre-existing environment variables untouched, so
