@@ -134,8 +134,10 @@ class RedditParser(BaseParser):
     @staticmethod
     def _normalize(topic: str) -> str:
         """Normalize subreddit identifiers to a consistent format."""
-
-        return topic.strip().lstrip("r/").lower().replace(" ", "_")
+        normalized = topic.strip().lower().replace(" ", "_")
+        if normalized.startswith("r/"):
+            return normalized[2:]
+        return normalized
 
     @staticmethod
     def _to_datetime(timestamp: Any) -> datetime:

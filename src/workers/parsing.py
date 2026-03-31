@@ -194,18 +194,36 @@ async def parse_all_sources(
 
             # Get list of topics/subreddits to fetch
             topics_to_fetch = _get_topics_for_source(source_name, settings)
-            limit_per_topic = max(10, settings.parsing.max_articles_per_source // len(topics_to_fetch))
+            # Keep per-run source load bounded: fetch only enough topics to hit the source cap.
+            max_posts_per_source = settings.parsing.max_articles_per_source
+            limit_per_topic = min(25, max(5, max_posts_per_source // max(1, len(topics_to_fetch))))
+            topic_budget = min(
+                len(topics_to_fetch),
+                10,
+                max(1, math.ceil(max_posts_per_source / limit_per_topic)),
+            )
+            topics_to_fetch = topics_to_fetch[:topic_budget]
 
             # Fetch posts from all topics
             all_posts: list[ParsedPost] = []
+            topic_failures = 0
             for topic in topics_to_fetch:
                 try:
                     topic_posts = await parser.get_posts(topic=topic, limit=limit_per_topic)
                     all_posts.extend(topic_posts)
+                    topic_failures = 0
                     if source_name == "reddit":
                         await asyncio.sleep(0.3)  # Rate limiting between subreddits
                 except Exception as topic_exc:
+                    topic_failures += 1
                     LOGGER.debug("Failed to fetch %s/%s: %s", source_name, topic, topic_exc)
+                    if source_name == "reddit" and topic_failures >= 3:
+                        LOGGER.warning(
+                            "Stopping Reddit fetch early after %d consecutive topic failures "
+                            "(likely temporary blocking/rate limiting).",
+                            topic_failures,
+                        )
+                        break
 
             posts = all_posts
             posts_fetched = len(posts)

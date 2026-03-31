@@ -111,9 +111,10 @@ def run_scheduler() -> int:
     """Run the background task scheduler."""
     try:
         from src.config import get_settings
-        from src.workers.scheduler import run_scheduler as _run_scheduler
+        from src.workers.scheduler import configure_logging, run_scheduler as _run_scheduler
 
         settings = get_settings()
+        configure_logging(settings.logging.level)
         asyncio.run(_run_scheduler(settings))
         return 0
     except ImportError as exc:

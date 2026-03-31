@@ -119,8 +119,9 @@ class BaseParser(ABC):
 
         try:
             return await self.fetch_content(url)
-        except FetchError:
-            self.logger.exception("Failed to fetch content from %s.", url)
+        except FetchError as exc:
+            # Network/API hiccups are expected; avoid traceback spam in recurring jobs.
+            self.logger.warning("Failed to fetch content from %s: %s", url, exc)
             raise
         except Exception as exc:  # noqa: BLE001
             self.logger.exception("Unexpected fetch failure for %s.", url, exc_info=exc)

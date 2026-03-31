@@ -16,6 +16,7 @@ import signal
 import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Any
 
 from apscheduler.events import (
@@ -143,6 +144,7 @@ def create_scheduler(
             "redis_client": redis_client,
             "settings": settings,
         },
+        next_run_time=datetime.now(UTC),
         replace_existing=True,
     )
     LOGGER.info(
